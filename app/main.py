@@ -1,7 +1,8 @@
 from collections import Counter
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.models.schemas import (
     AnalyzeRequest,
@@ -10,7 +11,7 @@ from app.models.schemas import (
     SummaryResult,
 )
 from app.services.sentiment import analyze_comments
-from app.services.youtube import extract_video_id, mock_fetch_comments
+from app.services.youtube import extract_video_id, fetch_comments
 
 
 app = FastAPI(
@@ -37,6 +38,30 @@ def build_summary(comments: list[CommentResult]) -> SummaryResult:
     )
 
 
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(request: Request, exc: RuntimeError):
+    return JSONResponse(
+        status_code=502,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_error_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error."},
+    )
+
+
 @app.get("/")
 def root() -> dict:
     return {
@@ -53,7 +78,7 @@ def health_check() -> dict:
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze_video(payload: AnalyzeRequest) -> AnalyzeResponse:
     video_id = extract_video_id(str(payload.youtube_url))
-    raw_comments = mock_fetch_comments(video_id)
+    raw_comments = fetch_comments(video_id, max_comments=50)
     comments = analyze_comments(raw_comments)
     summary = build_summary(comments)
 
