@@ -2,7 +2,7 @@ from collections import Counter
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 
 from app.models.schemas import (
     AnalyzeRequest,
@@ -37,6 +37,9 @@ def build_summary(comments: list[CommentResult]) -> SummaryResult:
         negative=counts.get("negative", 0),
     )
 
+@app.get("/app")
+def app_page():
+    return FileResponse("static/index.html")
 
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):

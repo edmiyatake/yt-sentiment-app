@@ -15,7 +15,17 @@ POSITIVE_WORDS = {
     "nice",
     "excellent",
     "fun",
-    "best",
+    "best"
+    "excited",
+    "want to play",
+    "wanted to play",
+    "glad",
+    "want to play",
+    "happy",
+    "cute",
+    "I'm Sold",
+    "sold",
+    "looks solid",
 }
 
 NEGATIVE_WORDS = {
@@ -29,6 +39,11 @@ NEGATIVE_WORDS = {
     "useless",
     "stupid",
     "confusing",
+    "sue",
+    "unfair",
+    "Pass",
+    "Palform",
+    "don't even",
 }
 
 

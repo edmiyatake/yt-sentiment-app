@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Sentiment Analyzer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 12px 18px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .summary {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #ccc;
+      font-weight: bold;
+    }
+
+    .comment {
+      border-top: 1px solid #eee;
+      padding: 12px 0;
+    }
+
+    .comment:first-child {
+      border-top: none;
+    }
+
+    .author {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .sentiment {
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .positive { color: green; }
+    .neutral { color: #666; }
+    .negative { color: red; }
+
+    .error {
+      color: red;
+      margin-top: 12px;
+    }
+
+    .loading {
+      margin-top: 12px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <h1>YouTube Sentiment Analyzer</h1>
+  <p>Paste a YouTube video URL to analyze recent comments.</p>
+
+  <div class="row">
+    <input
+      id="youtubeUrl"
+      type="text"
+      placeholder="https://www.youtube.com/watch?v=..."
+    />
+    <button id="analyzeBtn">Analyze</button>
+  </div>
+
+  <div id="loading" class="loading hidden">Analyzing comments...</div>
+  <div id="error" class="error hidden"></div>
+
+  <div id="results" class="hidden">
+    <div class="card">
+      <h2>Summary</h2>
+      <p><strong>Video ID:</strong> <span id="videoId"></span></p>
+      <div class="summary">
+        <div class="pill">Positive: <span id="positiveCount">0</span></div>
+        <div class="pill">Neutral: <span id="neutralCount">0</span></div>
+        <div class="pill">Negative: <span id="negativeCount">0</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Comments</h2>
+      <div id="commentsList"></div>
+    </div>
+  </div>
+
+  <script>
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const youtubeUrlInput = document.getElementById("youtubeUrl");
+    const loadingEl = document.getElementById("loading");
+    const errorEl = document.getElementById("error");
+    const resultsEl = document.getElementById("results");
+
+    const videoIdEl = document.getElementById("videoId");
+    const positiveCountEl = document.getElementById("positiveCount");
+    const neutralCountEl = document.getElementById("neutralCount");
+    const negativeCountEl = document.getElementById("negativeCount");
+    const commentsListEl = document.getElementById("commentsList");
+
+    function showLoading(isLoading) {
+      loadingEl.classList.toggle("hidden", !isLoading);
+      analyzeBtn.disabled = isLoading;
+    }
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.classList.remove("hidden");
+    }
+
+    function clearError() {
+      errorEl.textContent = "";
+      errorEl.classList.add("hidden");
+    }
+
+    function hideResults() {
+      resultsEl.classList.add("hidden");
+    }
+
+    function renderResults(data) {
+      videoIdEl.textContent = data.video_id;
+      positiveCountEl.textContent = data.summary.positive;
+      neutralCountEl.textContent = data.summary.neutral;
+      negativeCountEl.textContent = data.summary.negative;
+
+      commentsListEl.innerHTML = "";
+
+      data.comments.forEach((comment) => {
+        const div = document.createElement("div");
+        div.className = "comment";
+
+        div.innerHTML = `
+          <div class="author">${comment.author}</div>
+          <div>${comment.text}</div>
+          <div class="sentiment ${comment.sentiment}">
+            Sentiment: ${comment.sentiment}
+          </div>
+        `;
+
+        commentsListEl.appendChild(div);
+      });
+
+      resultsEl.classList.remove("hidden");
+    }
+
+    async function analyzeVideo() {
+      const youtubeUrl = youtubeUrlInput.value.trim();
+
+      clearError();
+      hideResults();
+
+      if (!youtubeUrl) {
+        showError("Please enter a YouTube URL.");
+        return;
+      }
+
+      showLoading(true);
+
+      try {
+        const response = await fetch("/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            youtube_url: youtubeUrl
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || "Something went wrong.");
+        }
+
+        renderResults(data);
+      } catch (error) {
+        showError(error.message || "Request failed.");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    analyzeBtn.addEventListener("click", analyzeVideo);
+
+    youtubeUrlInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        analyzeVideo();
+      }
+    });
+  </script>
+</body>
+</html>
