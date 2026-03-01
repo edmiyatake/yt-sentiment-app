@@ -4,143 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>YouTube Sentiment Analyzer</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 0 16px;
-      line-height: 1.5;
-      color: #222;
-    }
-
-    h1 {
-      margin-bottom: 8px;
-    }
-
-    p {
-      margin-top: 0;
-      color: #555;
-    }
-
-    .row {
-      display: flex;
-      gap: 12px;
-      margin: 16px 0;
-      flex-wrap: wrap;
-    }
-
-    input {
-      flex: 1;
-      min-width: 280px;
-      padding: 12px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-
-    button {
-      padding: 12px 18px;
-      font-size: 16px;
-      cursor: pointer;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background: white;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .sample-btn.active {
-      font-weight: bold;
-      border-color: #222;
-      outline: 2px solid #222;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .card {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 16px;
-      margin-top: 16px;
-      background: #fff;
-    }
-
-    .summary {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .pill {
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid #ccc;
-      font-weight: bold;
-      background: #fafafa;
-    }
-
-    .comment {
-      border-top: 1px solid #eee;
-      padding: 14px 0;
-    }
-
-    .comment:first-child {
-      border-top: none;
-    }
-
-    .author {
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-
-    .comment-text {
-      white-space: pre-wrap;
-    }
-
-    .sentiment {
-      font-size: 14px;
-      margin-top: 6px;
-      font-weight: bold;
-      text-transform: capitalize;
-    }
-
-    .positive {
-      color: green;
-    }
-
-    .neutral {
-      color: #666;
-    }
-
-    .negative {
-      color: red;
-    }
-
-    .error {
-      color: red;
-      margin-top: 12px;
-      font-weight: bold;
-    }
-
-    .loading {
-      margin-top: 12px;
-      color: #444;
-      font-weight: bold;
-    }
-
-    .meta {
-      color: #666;
-      font-size: 14px;
-      margin-top: 8px;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/css/styles.css" />
 </head>
 <body>
   <h1>YouTube Sentiment Analyzer</h1>
@@ -175,6 +39,23 @@
         <div class="pill">Neutral: <span id="neutralCount">0</span></div>
         <div class="pill">Negative: <span id="negativeCount">0</span></div>
       </div>
+
+      <div class="themes-grid">
+        <div class="theme-box">
+          <h3>Top Positive Themes</h3>
+          <ul id="positiveThemes"></ul>
+        </div>
+
+        <div class="theme-box">
+          <h3>Top Negative Themes</h3>
+          <ul id="negativeThemes"></ul>
+        </div>
+
+        <div class="theme-box">
+          <h3>Top Neutral Themes</h3>
+          <ul id="neutralThemes"></ul>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -183,145 +64,6 @@
     </div>
   </div>
 
-  <script>
-    const analyzeBtn = document.getElementById("analyzeBtn");
-    const youtubeUrlInput = document.getElementById("youtubeUrl");
-    const loadingEl = document.getElementById("loading");
-    const errorEl = document.getElementById("error");
-    const resultsEl = document.getElementById("results");
-
-    const videoIdEl = document.getElementById("videoId");
-    const sampleMetaEl = document.getElementById("sampleMeta");
-    const positiveCountEl = document.getElementById("positiveCount");
-    const neutralCountEl = document.getElementById("neutralCount");
-    const negativeCountEl = document.getElementById("negativeCount");
-    const commentsListEl = document.getElementById("commentsList");
-
-    const sampleButtons = document.querySelectorAll(".sample-btn");
-    let selectedSampleSize = 50;
-
-    sampleButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        selectedSampleSize = Number(button.dataset.size);
-
-        sampleButtons.forEach((btn) => btn.classList.remove("active"));
-        button.classList.add("active");
-      });
-    });
-
-    function showLoading(isLoading) {
-      loadingEl.classList.toggle("hidden", !isLoading);
-      analyzeBtn.disabled = isLoading;
-      sampleButtons.forEach((btn) => {
-        btn.disabled = isLoading;
-      });
-    }
-
-    function showError(message) {
-      errorEl.textContent = message;
-      errorEl.classList.remove("hidden");
-    }
-
-    function clearError() {
-      errorEl.textContent = "";
-      errorEl.classList.add("hidden");
-    }
-
-    function hideResults() {
-      resultsEl.classList.add("hidden");
-      commentsListEl.innerHTML = "";
-    }
-
-    function escapeHtml(value) {
-      const div = document.createElement("div");
-      div.textContent = value ?? "";
-      return div.innerHTML;
-    }
-
-    function renderResults(data) {
-      const total = Array.isArray(data.comments) ? data.comments.length : 0;
-
-      const positivePct = total ? ((data.summary.positive / total) * 100).toFixed(1) : "0.0";
-      const neutralPct = total ? ((data.summary.neutral / total) * 100).toFixed(1) : "0.0";
-      const negativePct = total ? ((data.summary.negative / total) * 100).toFixed(1) : "0.0";
-
-      videoIdEl.textContent = data.video_id || "Unknown";
-      sampleMetaEl.textContent = `${total} comments analyzed`;
-
-      positiveCountEl.textContent = `${data.summary.positive} (${positivePct}%)`;
-      neutralCountEl.textContent = `${data.summary.neutral} (${neutralPct}%)`;
-      negativeCountEl.textContent = `${data.summary.negative} (${negativePct}%)`;
-
-      commentsListEl.innerHTML = "";
-
-      data.comments.forEach((comment) => {
-        const div = document.createElement("div");
-        div.className = "comment";
-
-        const author = escapeHtml(comment.author || "Unknown");
-        const text = escapeHtml(comment.text || "");
-        const sentiment = escapeHtml(comment.sentiment || "neutral");
-
-        div.innerHTML = `
-          <div class="author">${author}</div>
-          <div class="comment-text">${text}</div>
-          <div class="sentiment ${sentiment}">
-            Sentiment: ${sentiment}
-          </div>
-        `;
-
-        commentsListEl.appendChild(div);
-      });
-
-      resultsEl.classList.remove("hidden");
-    }
-
-    async function analyzeVideo() {
-      const youtubeUrl = youtubeUrlInput.value.trim();
-
-      clearError();
-      hideResults();
-
-      if (!youtubeUrl) {
-        showError("Please enter a YouTube URL.");
-        return;
-      }
-
-      showLoading(true);
-
-      try {
-        const response = await fetch("/analyze", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            youtube_url: youtubeUrl,
-            sample_size: selectedSampleSize
-          })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Something went wrong.");
-        }
-
-        renderResults(data);
-      } catch (error) {
-        showError(error.message || "Request failed.");
-      } finally {
-        showLoading(false);
-      }
-    }
-
-    analyzeBtn.addEventListener("click", analyzeVideo);
-
-    youtubeUrlInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        analyzeVideo();
-      }
-    });
-  </script>
+  <script src="/static/js/app.js"></script>
 </body>
 </html>

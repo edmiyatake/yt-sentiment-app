@@ -3,7 +3,8 @@ import random
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.models.schemas import (
     AnalyzeRequest,
@@ -12,7 +13,7 @@ from app.models.schemas import (
     SummaryResult,
 )
 from app.services.cache import get_cached_comment_pool, set_cached_comment_pool
-from app.services.sentiment import analyze_comments
+from app.services.sentiment import analyze_comments, build_insight_summary
 from app.services.youtube import extract_video_id, fetch_comments
 
 
@@ -22,8 +23,10 @@ MAX_CACHED_POOL_SIZE = 600
 app = FastAPI(
     title="YouTube Sentiment API",
     version="0.1.0",
-    description="Analyze YouTube comments for basic sentiment."
+    description="Analyze YouTube comments for basic sentiment.",
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,17 +48,26 @@ def build_summary(comments: list[CommentResult]) -> SummaryResult:
 
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)},
+    )
 
 
 @app.exception_handler(RuntimeError)
 async def runtime_error_handler(request: Request, exc: RuntimeError):
-    return JSONResponse(status_code=502, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=502,
+        content={"detail": str(exc)},
+    )
 
 
 @app.exception_handler(Exception)
 async def generic_error_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error."},
+    )
 
 
 @app.get("/")
@@ -98,10 +110,12 @@ def analyze_video(payload: AnalyzeRequest) -> AnalyzeResponse:
 
     comments = analyze_comments(sampled_comments, batch_size=25)
     summary = build_summary(comments)
+    insights = build_insight_summary(comments)
 
     return AnalyzeResponse(
         video_id=video_id,
         summary=summary,
+        insights=insights,
         comments=comments,
     )
 

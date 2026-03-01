@@ -1,0 +1,223 @@
+/* =========================
+   Base Layout
+   ========================= */
+
+body {
+  font-family: Arial, sans-serif;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 16px;
+  line-height: 1.5;
+  color: #222;
+}
+
+.hidden {
+  display: none;
+}
+
+
+/* =========================
+   Typography
+   ========================= */
+
+h1 {
+  margin-bottom: 8px;
+}
+
+p {
+  margin-top: 0;
+  color: #555;
+}
+
+.meta {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+
+/* =========================
+   Layout Helpers
+   ========================= */
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+
+/* =========================
+   Form Controls
+   ========================= */
+
+input {
+  flex: 1;
+  min-width: 280px;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+button {
+  padding: 12px 18px;
+  font-size: 16px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sample-btn.active {
+  font-weight: bold;
+  border-color: #222;
+  outline: 2px solid #222;
+}
+
+
+/* =========================
+   Cards and Summary
+   ========================= */
+
+.card {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pill {
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  font-weight: bold;
+  background: #fafafa;
+}
+
+
+/* =========================
+   Status Messages
+   ========================= */
+
+.loading {
+  margin-top: 12px;
+  font-weight: bold;
+  color: #444;
+}
+
+.error {
+  margin-top: 12px;
+  font-weight: bold;
+  color: red;
+}
+
+
+/* =========================
+   Theme Summary Section
+   ========================= */
+
+.themes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.theme-box {
+  padding: 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.theme-box h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.theme-box ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.theme-box ul ul {
+  margin-top: 6px;
+  padding-left: 18px;
+}
+
+.theme-box li {
+  margin-bottom: 6px;
+}
+
+.theme-label {
+  font-weight: 700;
+}
+
+
+/* =========================
+   Comment List
+   ========================= */
+
+.comment {
+  padding: 14px 0;
+  border-top: 1px solid #eee;
+}
+
+.comment:first-child {
+  border-top: none;
+}
+
+.author {
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.comment-text {
+  white-space: pre-wrap;
+}
+
+.comment-meta {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #555;
+}
+
+
+/* =========================
+   Sentiment Labels
+   ========================= */
+
+.sentiment {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.positive {
+  color: green;
+}
+
+.neutral {
+  color: #666;
+}
+
+.negative {
+  color: red;
+}
