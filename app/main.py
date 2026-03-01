@@ -1,4 +1,5 @@
 from collections import Counter
+import random
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,8 +11,12 @@ from app.models.schemas import (
     CommentResult,
     SummaryResult,
 )
+from app.services.cache import get_cached_comment_pool, set_cached_comment_pool
 from app.services.sentiment import analyze_comments
 from app.services.youtube import extract_video_id, fetch_comments
+
+
+MAX_CACHED_POOL_SIZE = 600
 
 
 app = FastAPI(
@@ -37,32 +42,20 @@ def build_summary(comments: list[CommentResult]) -> SummaryResult:
         negative=counts.get("negative", 0),
     )
 
-@app.get("/app")
-def app_page():
-    return FileResponse("static/index.html")
 
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
-    return JSONResponse(
-        status_code=400,
-        content={"detail": str(exc)},
-    )
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
 @app.exception_handler(RuntimeError)
 async def runtime_error_handler(request: Request, exc: RuntimeError):
-    return JSONResponse(
-        status_code=502,
-        content={"detail": str(exc)},
-    )
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
 
 
 @app.exception_handler(Exception)
 async def generic_error_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error."},
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error."})
 
 
 @app.get("/")
@@ -73,6 +66,11 @@ def root() -> dict:
     }
 
 
+@app.get("/app")
+def app_page():
+    return FileResponse("static/index.html")
+
+
 @app.get("/health")
 def health_check() -> dict:
     return {"status": "ok"}
@@ -81,8 +79,24 @@ def health_check() -> dict:
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze_video(payload: AnalyzeRequest) -> AnalyzeResponse:
     video_id = extract_video_id(str(payload.youtube_url))
-    raw_comments = fetch_comments(video_id, max_comments=50)
-    comments = analyze_comments(raw_comments)
+    sample_size = payload.sample_size
+
+    raw_pool = get_cached_comment_pool(video_id)
+
+    if raw_pool is None:
+        raw_pool = fetch_comments(video_id, max_comments=MAX_CACHED_POOL_SIZE)
+
+        if not raw_pool:
+            raise RuntimeError("No comments were returned for this video.")
+
+        set_cached_comment_pool(video_id, raw_pool)
+
+    if len(raw_pool) <= sample_size:
+        sampled_comments = raw_pool
+    else:
+        sampled_comments = random.sample(raw_pool, sample_size)
+
+    comments = analyze_comments(sampled_comments, batch_size=25)
     summary = build_summary(comments)
 
     return AnalyzeResponse(

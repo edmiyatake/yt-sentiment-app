@@ -5,6 +5,7 @@ from pydantic import BaseModel, HttpUrl
 
 class AnalyzeRequest(BaseModel):
     youtube_url: HttpUrl
+    sample_size: Literal[50, 100, 200] = 50
 
 
 class CommentResult(BaseModel):

@@ -11,28 +11,52 @@
       margin: 40px auto;
       padding: 0 16px;
       line-height: 1.5;
+      color: #222;
     }
 
     h1 {
       margin-bottom: 8px;
     }
 
+    p {
+      margin-top: 0;
+      color: #555;
+    }
+
     .row {
       display: flex;
       gap: 12px;
-      margin: 20px 0;
+      margin: 16px 0;
+      flex-wrap: wrap;
     }
 
     input {
       flex: 1;
+      min-width: 280px;
       padding: 12px;
       font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
     }
 
     button {
       padding: 12px 18px;
       font-size: 16px;
       cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .sample-btn.active {
+      font-weight: bold;
+      border-color: #222;
+      outline: 2px solid #222;
     }
 
     .hidden {
@@ -41,27 +65,30 @@
 
     .card {
       border: 1px solid #ddd;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 16px;
       margin-top: 16px;
+      background: #fff;
     }
 
     .summary {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
+      margin-top: 12px;
     }
 
     .pill {
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid #ccc;
       font-weight: bold;
+      background: #fafafa;
     }
 
     .comment {
       border-top: 1px solid #eee;
-      padding: 12px 0;
+      padding: 14px 0;
     }
 
     .comment:first-child {
@@ -73,29 +100,51 @@
       margin-bottom: 4px;
     }
 
+    .comment-text {
+      white-space: pre-wrap;
+    }
+
     .sentiment {
       font-size: 14px;
       margin-top: 6px;
+      font-weight: bold;
+      text-transform: capitalize;
     }
 
-    .positive { color: green; }
-    .neutral { color: #666; }
-    .negative { color: red; }
+    .positive {
+      color: green;
+    }
+
+    .neutral {
+      color: #666;
+    }
+
+    .negative {
+      color: red;
+    }
 
     .error {
       color: red;
       margin-top: 12px;
+      font-weight: bold;
     }
 
     .loading {
       margin-top: 12px;
       color: #444;
+      font-weight: bold;
+    }
+
+    .meta {
+      color: #666;
+      font-size: 14px;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
   <h1>YouTube Sentiment Analyzer</h1>
-  <p>Paste a YouTube video URL to analyze recent comments.</p>
+  <p>Paste a YouTube video URL and analyze a random sample of comments.</p>
 
   <div class="row">
     <input
@@ -106,6 +155,12 @@
     <button id="analyzeBtn">Analyze</button>
   </div>
 
+  <div class="row">
+    <button class="sample-btn active" data-size="50">Random 50</button>
+    <button class="sample-btn" data-size="100">Random 100</button>
+    <button class="sample-btn" data-size="200">Random 200</button>
+  </div>
+
   <div id="loading" class="loading hidden">Analyzing comments...</div>
   <div id="error" class="error hidden"></div>
 
@@ -113,6 +168,8 @@
     <div class="card">
       <h2>Summary</h2>
       <p><strong>Video ID:</strong> <span id="videoId"></span></p>
+      <div class="meta" id="sampleMeta"></div>
+
       <div class="summary">
         <div class="pill">Positive: <span id="positiveCount">0</span></div>
         <div class="pill">Neutral: <span id="neutralCount">0</span></div>
@@ -134,14 +191,30 @@
     const resultsEl = document.getElementById("results");
 
     const videoIdEl = document.getElementById("videoId");
+    const sampleMetaEl = document.getElementById("sampleMeta");
     const positiveCountEl = document.getElementById("positiveCount");
     const neutralCountEl = document.getElementById("neutralCount");
     const negativeCountEl = document.getElementById("negativeCount");
     const commentsListEl = document.getElementById("commentsList");
 
+    const sampleButtons = document.querySelectorAll(".sample-btn");
+    let selectedSampleSize = 50;
+
+    sampleButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedSampleSize = Number(button.dataset.size);
+
+        sampleButtons.forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
+      });
+    });
+
     function showLoading(isLoading) {
       loadingEl.classList.toggle("hidden", !isLoading);
       analyzeBtn.disabled = isLoading;
+      sampleButtons.forEach((btn) => {
+        btn.disabled = isLoading;
+      });
     }
 
     function showError(message) {
@@ -156,13 +229,28 @@
 
     function hideResults() {
       resultsEl.classList.add("hidden");
+      commentsListEl.innerHTML = "";
+    }
+
+    function escapeHtml(value) {
+      const div = document.createElement("div");
+      div.textContent = value ?? "";
+      return div.innerHTML;
     }
 
     function renderResults(data) {
-      videoIdEl.textContent = data.video_id;
-      positiveCountEl.textContent = data.summary.positive;
-      neutralCountEl.textContent = data.summary.neutral;
-      negativeCountEl.textContent = data.summary.negative;
+      const total = Array.isArray(data.comments) ? data.comments.length : 0;
+
+      const positivePct = total ? ((data.summary.positive / total) * 100).toFixed(1) : "0.0";
+      const neutralPct = total ? ((data.summary.neutral / total) * 100).toFixed(1) : "0.0";
+      const negativePct = total ? ((data.summary.negative / total) * 100).toFixed(1) : "0.0";
+
+      videoIdEl.textContent = data.video_id || "Unknown";
+      sampleMetaEl.textContent = `${total} comments analyzed`;
+
+      positiveCountEl.textContent = `${data.summary.positive} (${positivePct}%)`;
+      neutralCountEl.textContent = `${data.summary.neutral} (${neutralPct}%)`;
+      negativeCountEl.textContent = `${data.summary.negative} (${negativePct}%)`;
 
       commentsListEl.innerHTML = "";
 
@@ -170,11 +258,15 @@
         const div = document.createElement("div");
         div.className = "comment";
 
+        const author = escapeHtml(comment.author || "Unknown");
+        const text = escapeHtml(comment.text || "");
+        const sentiment = escapeHtml(comment.sentiment || "neutral");
+
         div.innerHTML = `
-          <div class="author">${comment.author}</div>
-          <div>${comment.text}</div>
-          <div class="sentiment ${comment.sentiment}">
-            Sentiment: ${comment.sentiment}
+          <div class="author">${author}</div>
+          <div class="comment-text">${text}</div>
+          <div class="sentiment ${sentiment}">
+            Sentiment: ${sentiment}
           </div>
         `;
 
@@ -204,7 +296,8 @@
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            youtube_url: youtubeUrl
+            youtube_url: youtubeUrl,
+            sample_size: selectedSampleSize
           })
         });
 
